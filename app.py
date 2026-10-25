@@ -22,17 +22,23 @@ except Exception:
 
 MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 
-# ------------------------------------------------------------------
-# DATA CONTOH NASKAH
-# ------------------------------------------------------------------
-DEFAULT_TEXT = (
-    "Surya candra lan kartika\n"
-    "Jurang arga myang jaladri\n"
-    "Yekti mawa pasang surut\n"
-    "Ywa maneh ta amung sira\n"
-    "Yen kalisa owah gingsir"
-)
 
+def ask_gemini(prompt: str):
+    """Coba beberapa model berurutan. Mengembalikan (teks, nama_model, error_terakhir)."""
+    last_error = None
+    for model_name in MODELS:
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            if response.text:
+                return response.text, model_name, None
+        except Exception as e:
+            last_error = e  # coba model berikutnya
+    return None, None, last_error
+
+
+# ------------------------------------------------------------------
+# DATA: CONTOH NASKAH (TAB TELAAH & PUSTAKA)
+# ------------------------------------------------------------------
 SAMPLES = [
     {
         "label": "🌀 Kalatidha",
@@ -81,14 +87,69 @@ SAMPLES = [
 ]
 
 # ------------------------------------------------------------------
+# DATA: CONTOH KALIMAT UNTUK TAB GUBAH
+# ------------------------------------------------------------------
+GUBAH_SAMPLES = [
+    ("👑 Kuasa itu titipan", "Jangan sombong karena berkuasa, sebab kekuasaan hanyalah titipan yang suatu saat akan diambil kembali."),
+    ("🌊 Ingat asal-usul", "Hidup ini sementara. Ingatlah dari mana kita berasal dan ke mana kita akan kembali."),
+    ("💞 Cinta tulus", "Cinta yang tulus tidak menuntut balasan, ia mengalir seperti air yang menghidupi tanah."),
+]
+
+# ------------------------------------------------------------------
+# DATA: PEDOMAN METRUM TEMBANG MACAPAT (guru wilangan, guru lagu)
+# ------------------------------------------------------------------
+MACAPAT = {
+    "Dhandhanggula": [(10, "i"), (10, "a"), (8, "e"), (7, "u"), (9, "i"), (7, "a"), (6, "u"), (8, "a"), (12, "i"), (7, "a")],
+    "Sinom": [(8, "a"), (8, "i"), (8, "a"), (8, "i"), (7, "i"), (8, "u"), (7, "a"), (8, "i"), (12, "a")],
+    "Pangkur": [(8, "a"), (11, "i"), (8, "u"), (7, "a"), (12, "u"), (8, "a"), (8, "i")],
+    "Kinanthi": [(8, "u"), (8, "i"), (8, "a"), (8, "i"), (8, "a"), (8, "i")],
+    "Asmaradana": [(8, "i"), (8, "a"), (8, "e"), (8, "a"), (7, "a"), (8, "u"), (8, "a")],
+    "Mijil": [(10, "i"), (6, "o"), (10, "e"), (10, "i"), (6, "i"), (6, "u")],
+    "Maskumambang": [(12, "i"), (6, "a"), (8, "i"), (8, "a")],
+    "Durma": [(12, "a"), (7, "i"), (6, "a"), (7, "a"), (8, "i"), (5, "a"), (7, "i")],
+    "Pocung": [(12, "u"), (6, "a"), (8, "i"), (12, "a")],
+    "Gambuh": [(7, "u"), (10, "u"), (12, "i"), (8, "u"), (8, "o")],
+    "Megatruh": [(12, "u"), (8, "i"), (8, "u"), (8, "i"), (8, "o")],
+}
+
+RAGAM_OPTIONS = {
+    "Jawa Kuno / Kawi": "Jawa Kuno (Kawi) dengan kosakata serapan Sanskerta bergaya kakawin",
+    "Jawa Tengahan": "Jawa Tengahan (gaya kidung, masa Majapahit akhir)",
+    "Jawa Baru Sastra": "Jawa Baru sastra tinggi (bahasa tembang gaya Wedhatama / Wulangreh), memakai kosakata kawi secukupnya",
+}
+
+BENTUK_OPTIONS = [
+    "Gancaran (prosa puitis)",
+    "Tembang Macapat",
+    "Gaya Kakawin (bait 4 baris)",
+]
+
+NADA_OPTIONS = [
+    "Filosofis & kontemplatif",
+    "Nasihat & keutamaan hidup",
+    "Spiritual / religius",
+    "Kepemimpinan & kebijaksanaan",
+    "Romantis & lembut",
+    "Duka & perenungan",
+]
+
+
+def macapat_spec(pupuh: str) -> str:
+    rows = MACAPAT[pupuh]
+    parts = [f"baris {i}: {n} suku kata, berakhir vokal {v}" for i, (n, v) in enumerate(rows, 1)]
+    return f"pupuh {pupuh}, {len(rows)} baris. Aturan: " + "; ".join(parts)
+
+
+# ------------------------------------------------------------------
 # STATE & CALLBACK
 # ------------------------------------------------------------------
-if "input_text" not in st.session_state:
-    st.session_state.input_text = DEFAULT_TEXT
+for _k in ("input_text", "gubah_text"):
+    if _k not in st.session_state:
+        st.session_state[_k] = ""
 
 
-def set_text(text: str):
-    st.session_state.input_text = text
+def set_state(key: str, value: str):
+    st.session_state[key] = value
 
 
 # ------------------------------------------------------------------
@@ -108,7 +169,7 @@ CSS = """
   --muted: #A89B86;
 }
 
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+html, body, [class*="css"] { font-family: 'Inter', 'Noto Sans Javanese', sans-serif; }
 
 .stApp {
   background:
@@ -153,7 +214,7 @@ header[data-testid="stHeader"] { background: transparent; }
 .hero .subtitle {
   color: var(--muted);
   font-size: 0.92rem;
-  max-width: 480px;
+  max-width: 500px;
   margin: 0.3rem auto 0.9rem;
 }
 .orn { color: var(--gold); text-align: center; letter-spacing: 0.7em; opacity: 0.7; margin: 0.4rem 0; font-size: 0.8rem; }
@@ -169,8 +230,8 @@ header[data-testid="stHeader"] { background: transparent; }
 }
 
 /* ---------- TAB ---------- */
-.stTabs [data-baseweb="tab-list"] { gap: 0.3rem; border-bottom: 1px solid var(--line); }
-.stTabs [data-baseweb="tab"] { color: var(--muted); font-weight: 500; padding: 0.6rem 0.9rem; }
+.stTabs [data-baseweb="tab-list"] { gap: 0.2rem; border-bottom: 1px solid var(--line); }
+.stTabs [data-baseweb="tab"] { color: var(--muted); font-weight: 500; padding: 0.6rem 0.8rem; }
 .stTabs [aria-selected="true"] { color: var(--gold) !important; }
 .stTabs [data-baseweb="tab-highlight"] { background-color: var(--gold) !important; }
 
@@ -185,7 +246,9 @@ header[data-testid="stHeader"] { background: transparent; }
 .hint { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.4rem; }
 
 /* ---------- INPUT ---------- */
-.stTextArea label p, .stRadio label p { color: var(--muted) !important; font-size: 0.82rem !important; }
+.stTextArea label p, .stRadio label p, .stSelectbox label p, .stCheckbox label p {
+  color: var(--muted) !important; font-size: 0.82rem !important;
+}
 .stTextArea [data-baseweb="textarea"] {
   background: #17130F !important;
   border: 1px solid var(--line) !important;
@@ -198,10 +261,11 @@ header[data-testid="stHeader"] { background: transparent; }
 .stTextArea textarea {
   background: transparent !important;
   color: var(--text) !important;
-  font-family: 'Cormorant Garamond', serif !important;
+  font-family: 'Cormorant Garamond', 'Noto Sans Javanese', serif !important;
   font-size: 1.22rem !important;
   line-height: 1.6 !important;
 }
+.stTextArea textarea::placeholder { color: #6F6556 !important; font-style: italic; }
 
 /* ---------- TOMBOL ---------- */
 .stButton > button, .stDownloadButton > button {
@@ -210,7 +274,6 @@ header[data-testid="stHeader"] { background: transparent; }
   font-weight: 600;
   transition: all .18s ease;
 }
-/* tombol sekunder (chip contoh) */
 .stButton > button[kind="secondary"],
 [data-testid="stBaseButton-secondary"] {
   background: rgba(212,168,87,0.07);
@@ -225,7 +288,6 @@ header[data-testid="stHeader"] { background: transparent; }
   background: rgba(212,168,87,0.14);
   transform: translateY(-1px);
 }
-/* tombol utama (aksi) */
 .stButton > button[kind="primary"],
 [data-testid="stBaseButton-primary"] {
   background: linear-gradient(135deg, #E8C98A 0%, #D4A857 45%, #B98A3A 100%);
@@ -275,7 +337,7 @@ header[data-testid="stHeader"] { background: transparent; }
 [data-testid="stVerticalBlockBorderWrapper"] strong { color: var(--gold-soft); }
 [data-testid="stVerticalBlockBorderWrapper"] em { color: #CFE3D8; }
 
-/* ---------- EXPANDER (pustaka) ---------- */
+/* ---------- EXPANDER ---------- */
 [data-testid="stExpander"] {
   border: 1px solid var(--line) !important;
   border-radius: 14px !important;
@@ -308,12 +370,12 @@ HERO = """
 <div class="hero">
 <div class="aksara">ꦮꦱ꧀ꦏꦶꦠ ꦱꦱ꧀ꦠꦿ</div>
 <div class="title">Waskita Sastra</div>
-<div class="subtitle">Menyingkap makna naskah Jawa Kuno, Kawi, dan sastra Nusantara dengan bantuan kecerdasan buatan.</div>
+<div class="subtitle">Menyingkap makna naskah Jawa Kuno, Kawi, dan sastra Nusantara, serta menggubah kalimat Anda menjadi sastra Jawa dengan bantuan kecerdasan buatan.</div>
 <div class="orn">✦ ✦ ✦</div>
 <div class="pills">
-<span>📖 Terjemahan Bebas</span>
-<span>🔎 Bedah Kosakata</span>
-<span>🌌 Filosofi &amp; Kosmologi</span>
+<span>📖 Terjemahan &amp; Bedah Makna</span>
+<span>✍️ Gubah ke Sastra Kuno</span>
+<span>🌌 Rujukan Filosofi</span>
 </div>
 </div>
 """
@@ -322,23 +384,28 @@ st.markdown(HERO, unsafe_allow_html=True)
 # ------------------------------------------------------------------
 # TAB
 # ------------------------------------------------------------------
-tab1, tab2, tab3 = st.tabs(["🏠 Telaah", "📚 Pustaka", "ℹ️ Tentang"])
+tab1, tab2, tab3, tab4 = st.tabs(["🏠 Telaah", "✍️ Gubah", "📚 Pustaka", "ℹ️ Tentang"])
 
 # ================= TAB 1: TELAAH =================
 with tab1:
-    st.markdown('<div class="section-title">Masukkan Teks / Bait Sastra</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hint">Ketik, tempel, atau coba salah satu naskah contoh di bawah.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Telaah Naskah</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hint">Tempel teks Jawa Kuno / Kawi / bait sastra untuk diterjemahkan dan dibedah maknanya, '
+        "atau coba salah satu naskah contoh.</div>",
+        unsafe_allow_html=True,
+    )
 
     chip_cols = st.columns(len(SAMPLES))
     for i, s in enumerate(SAMPLES):
         with chip_cols[i]:
-            st.button(s["label"], key=f"chip_{i}", on_click=set_text, args=(s["text"],))
+            st.button(s["label"], key=f"chip_{i}", on_click=set_state, args=("input_text", s["text"]))
 
     user_input = st.text_area(
         "Teks Jawa Kuno / Kawi / bait sastra:",
         key="input_text",
         height=190,
         max_chars=3000,
+        placeholder="Ketik atau tempel bait sastra di sini...\n\nContoh: Amenangi jaman edan, ewuh aya ing pambudi...",
     )
 
     depth = st.radio(
@@ -346,9 +413,16 @@ with tab1:
         ["Ringkas", "Mendalam"],
         index=1,
         horizontal=True,
+        key="depth",
     )
 
-    if st.button("✨ Terjemahkan & Bedah Makna", type="primary"):
+    col_go, col_clear = st.columns([3, 1])
+    with col_go:
+        go_telaah = st.button("✨ Terjemahkan & Bedah Makna", type="primary", key="go_telaah")
+    with col_clear:
+        st.button("🗑 Hapus", key="clear_telaah", on_click=set_state, args=("input_text", ""))
+
+    if go_telaah:
         if not user_input.strip():
             st.warning("Mohon masukkan teks terlebih dahulu.")
         elif client is None:
@@ -379,31 +453,15 @@ Analisis teks sastra berikut:
 Gunakan judul bagian dengan format "###" (jangan "#" atau "##").
 Jika ada kata atau bagian yang Anda tidak yakin, katakan terus terang.
 """
-
-            analysis_result, used_model, last_error = None, None, None
             with st.spinner("Membaca lontar... menimbang kata dan makna..."):
-                for model_name in MODELS:
-                    try:
-                        response = client.models.generate_content(
-                            model=model_name, contents=prompt
-                        )
-                        analysis_result = response.text
-                        used_model = model_name
-                        break
-                    except Exception as e:
-                        last_error = e  # coba model berikutnya
+                text, used_model, err = ask_gemini(prompt)
 
-            if analysis_result:
-                st.session_state["result"] = {
-                    "text": analysis_result,
-                    "model": used_model,
-                    "source": user_input,
-                }
+            if text:
+                st.session_state["result"] = {"text": text, "model": used_model, "source": user_input}
             else:
                 st.session_state.pop("result", None)
-                st.error(f"Gagal menghubungi Gemini: {last_error}")
+                st.error(f"Gagal menghubungi Gemini: {err}")
 
-    # ---- Tampilan hasil (tetap muncul setelah tombol unduh ditekan) ----
     res = st.session_state.get("result")
     if res:
         st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
@@ -422,8 +480,9 @@ Jika ada kata atau bagian yang Anda tidak yakin, katakan terus terang.
         st.download_button(
             "⬇ Simpan hasil (.md)",
             data=export_md,
-            file_name="waskita-sastra-hasil.md",
+            file_name="waskita-sastra-telaah.md",
             mime="text/markdown",
+            key="dl_telaah",
         )
         st.markdown(
             '<div class="disclaimer">Hasil AI dapat keliru, terutama pada teks Kawi/Jawa Kuno. '
@@ -431,25 +490,183 @@ Jika ada kata atau bagian yang Anda tidak yakin, katakan terus terang.
             unsafe_allow_html=True,
         )
 
-# ================= TAB 2: PUSTAKA =================
+# ================= TAB 2: GUBAH =================
 with tab2:
+    st.markdown('<div class="section-title">Gubah ke Sastra Jawa</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hint">Tulis kalimat dalam bahasa Indonesia (atau bahasa lain, otomatis dikenali). '
+        "Aplikasi akan menggubahnya menjadi sastra Jawa, lengkap dengan terjemahan balik, alasan pilihan kata, "
+        "dan rujukan filosofinya.</div>",
+        unsafe_allow_html=True,
+    )
+
+    g_cols = st.columns(len(GUBAH_SAMPLES))
+    for i, (label, sentence) in enumerate(GUBAH_SAMPLES):
+        with g_cols[i]:
+            st.button(label, key=f"gchip_{i}", on_click=set_state, args=("gubah_text", sentence))
+
+    gubah_input = st.text_area(
+        "Kalimat atau gagasan yang ingin digubah:",
+        key="gubah_text",
+        height=140,
+        max_chars=1500,
+        placeholder="Tulis kalimat, pesan, atau gagasan Anda di sini...\n\nContoh: Hidup ini sementara, ingatlah asal dan tujuan kita.",
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        ragam = st.selectbox("Ragam bahasa", list(RAGAM_OPTIONS.keys()), key="ragam")
+    with c2:
+        bentuk = st.selectbox("Bentuk karya", BENTUK_OPTIONS, key="bentuk")
+
+    pupuh = None
+    if bentuk == "Tembang Macapat":
+        pupuh = st.selectbox("Pupuh (metrum macapat)", list(MACAPAT.keys()), key="pupuh")
+
+    nada = st.selectbox("Nada & tema", NADA_OPTIONS, key="nada")
+    pakai_aksara = st.checkbox("Sertakan aksara Jawa (Hanacaraka), eksperimental", key="pakai_aksara")
+
+    col_go2, col_clear2 = st.columns([3, 1])
+    with col_go2:
+        go_gubah = st.button("✍️ Gubah Menjadi Sastra", type="primary", key="go_gubah")
+    with col_clear2:
+        st.button("🗑 Hapus", key="clear_gubah", on_click=set_state, args=("gubah_text", ""))
+
+    if go_gubah:
+        if not gubah_input.strip():
+            st.warning("Mohon tulis kalimat yang ingin digubah terlebih dahulu.")
+        elif client is None:
+            st.error("API Key belum dikonfigurasi.")
+        else:
+            if bentuk == "Tembang Macapat":
+                bentuk_detail = "Tembang Macapat, " + macapat_spec(pupuh)
+                catatan_bentuk = (
+                    "### Catatan Metrum\n"
+                    "Tuliskan jumlah suku kata dan vokal akhir setiap baris gubahan, lalu bandingkan dengan aturan pupuh. "
+                    "Jika ada baris yang belum sesuai, tulis terus terang barisnya dan seberapa besar penyimpangannya."
+                )
+            elif bentuk == "Gaya Kakawin (bait 4 baris)":
+                bentuk_detail = (
+                    "Gaya kakawin: satu atau dua bait, masing-masing 4 baris, dengan irama berimbang dan "
+                    "diksi bergaya kakawin. Tidak perlu memenuhi metrum guru-laghu yang ketat."
+                )
+                catatan_bentuk = (
+                    "### Catatan Bentuk\n"
+                    "Jelaskan singkat bahwa gubahan ini bergaya kakawin namun tidak memenuhi metrum guru-laghu ketat."
+                )
+            else:
+                bentuk_detail = "Gancaran: prosa puitis 3-6 kalimat, dengan irama dan paralelisme khas sastra Jawa."
+                catatan_bentuk = ""
+
+            aksara_rule = (
+                "\n### Aksara Jawa (Hanacaraka)\n"
+                "Tulis gubahan dalam aksara Jawa Unicode. Ini eksperimental; jika tidak yakin dengan penulisannya, "
+                "katakan terus terang."
+                if pakai_aksara
+                else ""
+            )
+
+            prompt = f"""
+Bertindaklah sebagai pujangga dan ahli filologi Jawa Kuno (Kawi), sekaligus guru tembang macapat.
+
+TUGAS: Gubahlah teks berikut menjadi sastra Jawa. Teks asal boleh berbahasa apa pun; kenali sendiri bahasanya,
+pahami maknanya, lalu gubah.
+\"\"\"
+{gubah_input}
+\"\"\"
+
+SPESIFIKASI
+- Ragam bahasa: {RAGAM_OPTIONS[ragam]}
+- Bentuk: {bentuk_detail}
+- Nada & tema: {nada}
+
+ATURAN
+- Pertahankan makna asli teks; boleh memperindah, jangan membalik atau menambah gagasan yang bertentangan.
+- Pakai kosakata Jawa Kuno/kawi yang Anda yakini benar. Tandai kata yang kurang Anda yakini dengan tanda (?).
+- Jangan mengarang kutipan naskah. Jangan mengaku gubahan ini sebagai naskah asli kuno; ini gubahan baru.
+- Gunakan judul bagian dengan format "###" (jangan "#" atau "##").
+
+FORMAT JAWABAN (urut):
+### Gubahan
+(hasil gubahan; untuk macapat dan kakawin, tulis satu baris per baris)
+### Terjemahan Balik (Bahasa Indonesia)
+(terjemahan gubahan ke bahasa Indonesia agar pengguna bisa memeriksa kesetiaan makna)
+### Pilihan Kata & Alasan Puitis
+(daftar kata kunci: kata, arti, dan alasan pemilihannya: nuansa, asal kata, bunyi/irama, kaitan dengan sasmita)
+### Rujukan Filosofi & Sastra
+(2-3 konsep filosofi Jawa yang selaras dengan isi teks, misalnya dari Wedhatama, Wulangreh, Kalatidha, Serat Centhini, \
+Dewaruci, Kakawin Sutasoma, Arjunawiwaha, atau Bharatayuddha, beserta kaitannya secara singkat. \
+Jangan mengutip bait secara harfiah kecuali Anda sangat yakin; jika tidak yakin, jelaskan temanya saja dan tulis \
+"perlu diverifikasi".)
+{catatan_bentuk}{aksara_rule}
+"""
+            with st.spinner("Menggubah bait... memilih kata dan irama..."):
+                text, used_model, err = ask_gemini(prompt)
+
+            if text:
+                st.session_state["result_gubah"] = {
+                    "text": text,
+                    "model": used_model,
+                    "source": gubah_input,
+                    "ragam": ragam,
+                    "bentuk": bentuk + (f" ({pupuh})" if pupuh else ""),
+                    "nada": nada,
+                }
+            else:
+                st.session_state.pop("result_gubah", None)
+                st.error(f"Gagal menghubungi Gemini: {err}")
+
+    resg = st.session_state.get("result_gubah")
+    if resg:
+        st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">✍️ Hasil Gubahan</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(resg["text"])
+        st.caption(f"{resg['ragam']} · {resg['bentuk']} · {resg['nada']} · {resg['model']}")
+
+        export_g = (
+            "# Waskita Sastra - Hasil Gubahan\n\n"
+            "## Teks Asal\n\n"
+            + "\n".join("> " + line for line in resg["source"].splitlines())
+            + f"\n\n*{resg['ragam']} · {resg['bentuk']} · {resg['nada']}*\n\n---\n\n"
+            + resg["text"]
+        )
+        st.download_button(
+            "⬇ Simpan gubahan (.md)",
+            data=export_g,
+            file_name="waskita-sastra-gubahan.md",
+            mime="text/markdown",
+            key="dl_gubah",
+        )
+        st.markdown(
+            '<div class="disclaimer">Ini gubahan baru hasil AI, bukan naskah kuno asli. Kosakata Kawi dan metrum bisa '
+            "keliru; kata bertanda (?) perlu diperiksa. Verifikasi dengan kamus Zoetmulder atau ahli sastra Jawa "
+            "sebelum dipublikasikan.</div>",
+            unsafe_allow_html=True,
+        )
+
+# ================= TAB 3: PUSTAKA =================
+with tab3:
     st.markdown('<div class="section-title">Pustaka Naskah Klasik</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hint">Pilih naskah, lalu tekan "Muat ke Telaah" dan kembali ke tab Telaah.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hint">Pilih naskah, lalu tekan "Muat ke Telaah" dan kembali ke tab Telaah.</div>',
+        unsafe_allow_html=True,
+    )
 
     for i, s in enumerate(SAMPLES):
         with st.expander(f"{s['title']}  ·  {s['author']}"):
             st.markdown(f'<div class="meta">{s["meta"]}</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="excerpt">{s["text"]}</div>', unsafe_allow_html=True)
-            if st.button("Muat ke Telaah", key=f"load_{i}", on_click=set_text, args=(s["text"],)):
+            if st.button("Muat ke Telaah", key=f"load_{i}", on_click=set_state, args=("input_text", s["text"])):
                 st.toast("Teks dimuat. Buka tab Telaah untuk menganalisis.", icon="📜")
 
-# ================= TAB 3: TENTANG =================
-with tab3:
+# ================= TAB 4: TENTANG =================
+with tab4:
     st.markdown('<div class="section-title">Tentang Waskita Sastra</div>', unsafe_allow_html=True)
     st.write(
-        "Waskita Sastra membantu peneliti, penggiat budaya, dan masyarakat umum "
-        "mengkaji teks sastra Nusantara: menerjemahkan, membedah kosakata, dan menggali "
-        "lapisan makna filosofisnya."
+        "Waskita Sastra membantu peneliti, penggiat budaya, dan masyarakat umum mengkaji teks sastra "
+        "Nusantara: menerjemahkan, membedah kosakata, menggali lapisan makna filosofisnya, dan menggubah "
+        "kalimat modern menjadi sastra Jawa."
     )
     st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
     st.caption("Dibangun dengan Python, Streamlit, & Gemini AI · Mobile Optimized")
