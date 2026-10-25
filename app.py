@@ -45,14 +45,6 @@ st.markdown(
         border: 1px solid #D3CEC4;
         border-radius: 8px;
     }
-    .card {
-        background-color: #FFFFFF;
-        padding: 1.2rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
-        border-left: 4px solid #6A7B68;
-    }
     h1, h2, h3, h4 {
         color: #2C352D;
     }
@@ -81,57 +73,43 @@ with tab1:
     )
 
     if st.button("Terjemahkan & Bedah Makna"):
-    if not user_input.strip():
-        st.warning("Mohon masukkan teks terlebih dahulu.")
-    elif client is None:
-        st.error("API Key belum dikonfigurasi.")
-    else:
-        prompt = f"""
-        Bertindaklah sebagai ahli filologi, sastra Jawa Kuno, dan Kawi Nusantara.
-        Analisis teks sastra berikut secara mendalam:
-        "{user_input}"
-
-        Berikan output dalam format struktur berikut:
-        1. **Terjemahan Bebas (Bahasa Indonesia):** Terjemahan utuh yang puitis namun akurat.
-        2. **Bedah Kosakata & Analisis Per Baris:** Uraikan kata-kata penting (misal: kawi/kuna) beserta arti harfiahnya.
-        3. **Nilai Filosofi & Kosmologi:** Penjelasan makna mendalam atau sasmita di balik teks tersebut.
-        """
-
-        MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
-        analysis_result, last_error = None, None
-
-        with st.spinner("Menganalisis struktur bahasa, leksikon, dan filosofi..."):
-            for model_name in MODELS:
-                try:
-                    response = client.models.generate_content(
-                        model=model_name, contents=prompt
-                    )
-                    analysis_result = response.text
-                    break
-                except Exception as e:
-                    last_error = e   # coba model berikutnya
-
-        if analysis_result:
-            st.markdown("---")
-            st.markdown("### 📖 Hasil Analisis & Terjemahan")
-            with st.container(border=True):
-                st.markdown(analysis_result)
+        if not user_input.strip():
+            st.warning("Mohon masukkan teks terlebih dahulu.")
+        elif client is None:
+            st.error("API Key belum dikonfigurasi.")
         else:
-            st.error(f"Gagal menghubungi Gemini: {last_error}")
-                analysis_result = response.text
+            prompt = f"""
+            Bertindaklah sebagai ahli filologi, sastra Jawa Kuno, dan Kawi Nusantara.
+            Analisis teks sastra berikut secara mendalam:
+            "{user_input}"
 
-                # --- TAMPILAN HASIL (FRONT-END OUTPUT) ---
+            Berikan output dalam format struktur berikut:
+            1. **Terjemahan Bebas (Bahasa Indonesia):** Terjemahan utuh yang puitis namun akurat.
+            2. **Bedah Kosakata & Analisis Per Baris:** Uraikan kata-kata penting (misal: kawi/kuna) beserta arti harfiahnya.
+            3. **Nilai Filosofi & Kosmologi:** Penjelasan makna mendalam atau sasmita di balik teks tersebut.
+            """
+
+            MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
+            analysis_result, last_error = None, None
+
+            with st.spinner("Menganalisis struktur bahasa, leksikon, dan filosofi..."):
+                for model_name in MODELS:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name, contents=prompt
+                        )
+                        analysis_result = response.text
+                        break
+                    except Exception as e:
+                        last_error = e  # coba model berikutnya
+
+            if analysis_result:
                 st.markdown("---")
                 st.markdown("### 📖 Hasil Analisis & Terjemahan")
-                
-                st.markdown(
-                    f"""
-                <div class="card">
-                    {analysis_result.replace(chr(10), '<br>')}
-                </div>
-                """,
-                    unsafe_allow_html=True,
-                )
+                with st.container(border=True):
+                    st.markdown(analysis_result)
+            else:
+                st.error(f"Gagal menghubungi Gemini: {last_error}")
 
 with tab2:
     st.markdown("#### 📚 Pustaka Naskah Klasik Referensi")
