@@ -80,34 +80,44 @@ with tab1:
         height=140,
     )
 
-    if st.button("Terjemahkan & Bedah Makna"):
-        if not user_input.strip():
-            st.warning("Mohon masukkan teks terlebih dahulu.")
-        else:
-            with st.spinner("Menganalisis struktur bahasa, leksikon, dan filosofi..."):
-                
-                # --- BACKEND LOGIC / PEMROSESAN DINAMIS ---
-                # Menggunakan pemodelan bahasa untuk menerjemahkan dan membedah bait secara kontekstual
-                from google import genai
-                
-                # Memanfaatkan klien internal environment untuk analisis sastra
-                client = genai.Client()
-                prompt = f"""
-                Bertindaklah sebagai ahli filologi, sastra Jawa Kuno, dan Kawi Nusantara. 
-                Analisis teks sastra berikut secara mendalam:
-                "{user_input}"
+   if st.button("Terjemahkan & Bedah Makna"):
+    if not user_input.strip():
+        st.warning("Mohon masukkan teks terlebih dahulu.")
+    elif client is None:
+        st.error("API Key belum dikonfigurasi.")
+    else:
+        prompt = f"""
+        Bertindaklah sebagai ahli filologi, sastra Jawa Kuno, dan Kawi Nusantara.
+        Analisis teks sastra berikut secara mendalam:
+        "{user_input}"
 
-                Berikan output dalam format struktur berikut:
-                1. **Terjemahan Bebas (Bahasa Indonesia):** Terjemahan utuh yang puitis namun akurat.
-                2. **Bedah Kosakata & Analisis Per Baris:** Uraikan kata-kata penting (misal: kawi/kuna) beserta arti harfiahnya.
-                3. **Nilai Filosofi & Kosmologi:** Penjelasan makna mendalam atau sasmita di balik teks tersebut.
-                """
-                
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                )
-                
+        Berikan output dalam format struktur berikut:
+        1. **Terjemahan Bebas (Bahasa Indonesia):** Terjemahan utuh yang puitis namun akurat.
+        2. **Bedah Kosakata & Analisis Per Baris:** Uraikan kata-kata penting (misal: kawi/kuna) beserta arti harfiahnya.
+        3. **Nilai Filosofi & Kosmologi:** Penjelasan makna mendalam atau sasmita di balik teks tersebut.
+        """
+
+        MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
+        analysis_result, last_error = None, None
+
+        with st.spinner("Menganalisis struktur bahasa, leksikon, dan filosofi..."):
+            for model_name in MODELS:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name, contents=prompt
+                    )
+                    analysis_result = response.text
+                    break
+                except Exception as e:
+                    last_error = e   # coba model berikutnya
+
+        if analysis_result:
+            st.markdown("---")
+            st.markdown("### 📖 Hasil Analisis & Terjemahan")
+            with st.container(border=True):
+                st.markdown(analysis_result)
+        else:
+            st.error(f"Gagal menghubungi Gemini: {last_error}")
                 analysis_result = response.text
 
                 # --- TAMPILAN HASIL (FRONT-END OUTPUT) ---
