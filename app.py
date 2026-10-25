@@ -1,12 +1,21 @@
 import streamlit as st
+from google import genai
 
-# Konfigurasi Halaman & Tema Estetik (Sage Green, Warm Cream, Taupe)
+# Konfigurasi Halaman & Tema Estetik
 st.set_page_config(
     page_title="Waskita Sastra - Kajian Klasik & Kawi",
     page_icon="📜",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
+# Mengambil API key secara aman dari Streamlit Secrets
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    client = genai.Client(api_key=api_key)
+except Exception as e:
+    st.error("API Key belum dikonfigurasi di Streamlit Secrets. Harap atur terlebih dahulu di pengaturan aplikasi Anda.")
+    client = None
 
 # Styling CSS Kustom untuk Tampilan Mobile-Friendly & Estetik Muted Palette
 st.markdown(
