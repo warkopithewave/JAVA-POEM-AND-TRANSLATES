@@ -80,7 +80,7 @@ with tab1:
         height=140,
     )
 
-   if st.button("Terjemahkan & Bedah Makna"):
+    if st.button("Terjemahkan & Bedah Makna"):
     if not user_input.strip():
         st.warning("Mohon masukkan teks terlebih dahulu.")
     elif client is None:
