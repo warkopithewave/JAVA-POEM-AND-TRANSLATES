@@ -30,7 +30,9 @@ MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 # Contoh: SUPPORT_URL = "https://saweria.co/namaanda"
 # Kosongkan ("") untuk menyembunyikan tombol dukungan.
 # ------------------------------------------------------------------
-SUPPORT_URL = ""
+LINK_SAWERIA = "https://saweria.co/Localcoffe"     # contoh: "https://saweria.co/namaanda"
+LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"   # contoh: "https://sociabuzz.com/namaanda/tribe"
+LINK_TELEGRAM = "t.me/FDEwithyours"    # contoh: "https://t.me/namaanda"
 SUPPORT_LABEL = "☕ Traktir kopi untuk pengembang"
 
 
