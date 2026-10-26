@@ -61,8 +61,19 @@ def _card_footer() -> str:
 
 
 @st.cache_data(show_spinner=False, max_entries=32)
-def build_card(verse: str, translation: str, label: str, footer: str) -> bytes:
-    return kartu.make_card(verse, translation, label, footer)
+def build_cards(verse: str, translation: str, label: str, footer: str, theme: str) -> list:
+    return kartu.make_cards(verse, translation, label, footer, theme)
+
+
+def _zip_cards(pngs: list) -> bytes:
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+        for i, p in enumerate(pngs, 1):
+            z.writestr(f"waskita-sastra-kartu-{i}.png", p)
+    return buf.getvalue()
 
 
 def _normalize_url(url: str) -> str:
@@ -768,23 +779,45 @@ Jangan mengutip bait secara harfiah kecuali Anda sangat yakin; jika tidak yakin,
             card_verse, card_trans = kartu.extract_card_parts(resg["text"])
             if card_verse:
                 card_label = resg["bentuk"].replace(" (", " · ").replace(")", "")
+                st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">🖼 Kartu Bagikan</div>', unsafe_allow_html=True)
+                tema_label = st.radio(
+                    "Tema kartu",
+                    ["Terang (krem)", "Gelap (emas)"],
+                    horizontal=True,
+                    key="tema_kartu",
+                )
+                tema = "terang" if tema_label.startswith("Terang") else "gelap"
                 try:
-                    card_png = build_card(card_verse, card_trans, card_label, _card_footer())
+                    card_pngs = build_cards(card_verse, card_trans, card_label, _card_footer(), tema)
                 except Exception as e:
-                    card_png = None
+                    card_pngs = []
                     st.info(f"Kartu bagikan belum bisa dibuat: {e}")
-                if card_png:
-                    st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="section-title">🖼 Kartu Bagikan</div>', unsafe_allow_html=True)
-                    _l, _m, _r = st.columns([1, 2, 1])
-                    with _m:
-                        st.image(card_png, width=360)
+                if card_pngs:
+                    if len(card_pngs) > 1:
+                        st.caption(f"Teks cukup panjang, jadi dibagi menjadi {len(card_pngs)} kartu agar huruf tetap besar dan terbaca.")
+                    per_row = 2
+                    for start in range(0, len(card_pngs), per_row):
+                        row = card_pngs[start:start + per_row]
+                        cols = st.columns(per_row)
+                        for j, png in enumerate(row):
+                            idx = start + j
+                            with cols[j]:
+                                st.image(png, use_container_width=True)
+                                st.download_button(
+                                    f"⬇ Unduh kartu {idx + 1}" if len(card_pngs) > 1 else "⬇ Unduh kartu (.png)",
+                                    data=png,
+                                    file_name=f"waskita-sastra-kartu-{idx + 1}.png",
+                                    mime="image/png",
+                                    key=f"dl_kartu_{idx}",
+                                )
+                    if len(card_pngs) > 1:
                         st.download_button(
-                            "⬇ Unduh kartu (.png)",
-                            data=card_png,
-                            file_name="waskita-sastra-kartu.png",
-                            mime="image/png",
-                            key="dl_kartu",
+                            f"⬇ Unduh semua ({len(card_pngs)} kartu, .zip)",
+                            data=_zip_cards(card_pngs),
+                            file_name="waskita-sastra-kartu.zip",
+                            mime="application/zip",
+                            key="dl_kartu_zip",
                         )
                     if not kartu.FONTS_OK:
                         st.caption("File font (CormorantGaramond*.ttf) belum diunggah, kartu memakai huruf cadangan.")
