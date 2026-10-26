@@ -26,28 +26,43 @@ MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 
 # ------------------------------------------------------------------
 # DUKUNGAN PENGEMBANG
-# Tempel link Saweria / Trakteer / Ko-fi / Buy Me a Coffee Anda di bawah ini.
-# Contoh: SUPPORT_URL = "https://saweria.co/namaanda"
-# Kosongkan ("") untuk menyembunyikan tombol dukungan.
+# Isi link di bawah ini. Kosongkan ("") link yang tidak dipakai agar tombolnya tersembunyi.
+# Awalan https:// akan ditambahkan otomatis jika belum ada.
 # ------------------------------------------------------------------
-LINK_SAWERIA = "https://saweria.co/Localcoffe"     # contoh: "https://saweria.co/namaanda"
-LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"   # contoh: "https://sociabuzz.com/namaanda/tribe"
-LINK_TELEGRAM = "t.me/FDEwithyours"    # contoh: "https://t.me/namaanda"
-SUPPORT_LABEL = "☕ Traktir kopi untuk pengembang"
+LINK_SAWERIA = "https://saweria.co/Localcoffe"
+LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"
+LINK_TELEGRAM = "t.me/FDEwithyours"
+
+SUPPORT_LINKS = [
+    ("☕ Traktir via Saweria", LINK_SAWERIA),
+    ("🎁 Dukung via Sociabuzz", LINK_SOCIABUZZ),
+    ("💬 Gabung Telegram", LINK_TELEGRAM),
+]
+
+
+def _normalize_url(url: str) -> str:
+    url = (url or "").strip()
+    if url and not url.lower().startswith(("http://", "https://")):
+        url = "https://" + url
+    return url
 
 
 def support_block():
-    if not SUPPORT_URL:
+    buttons = []
+    for label, link in SUPPORT_LINKS:
+        url = _normalize_url(link)
+        if url:
+            buttons.append(
+                f'<a class="support-btn" href="{html.escape(url, quote=True)}" '
+                f'target="_blank" rel="noopener noreferrer">{html.escape(label)}</a>'
+            )
+    if not buttons:
         return
-    url = html.escape(SUPPORT_URL, quote=True)
-    label = html.escape(SUPPORT_LABEL)
     st.markdown(
-        f"""
-<div class="support">
-<p>Aplikasi ini gratis. Jika bermanfaat bagi kajian atau karya Anda, dukung pengembangannya.</p>
-<a class="support-btn" href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>
-</div>
-""",
+        '<div class="support">'
+        "<p>Aplikasi ini gratis. Jika bermanfaat bagi kajian atau karya Anda, dukung pengembangannya.</p>"
+        + "".join(buttons)
+        + "</div>",
         unsafe_allow_html=True,
     )
 
@@ -401,6 +416,7 @@ hr { border-color: var(--line); }
 .support p { color: var(--muted); font-size: 0.84rem; margin: 0 0 0.7rem; }
 .support a.support-btn {
   display: inline-block;
+  margin: 0.2rem 0.25rem;
   padding: 0.55rem 1.3rem;
   border-radius: 999px;
   border: 1px solid var(--gold);
