@@ -31,7 +31,7 @@ MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 # ------------------------------------------------------------------
 LINK_SAWERIA = "https://saweria.co/Localcoffe"
 LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"
-LINK_TELEGRAM = ""
+LINK_TELEGRAM = "t.me/FDEwithyours"
 
 SUPPORT_LINKS = [
     ("☕ Traktir via Saweria", LINK_SAWERIA),
@@ -60,9 +60,12 @@ def support_block():
         return
     st.markdown(
         '<div class="support">'
-        "<p>Aplikasi ini gratis. Jika bermanfaat bagi kajian atau karya Anda, dukung pengembangannya.</p>"
-        + "".join(buttons)
-        + "</div>",
+        '<div class="s-orn">✦ ✦ ✦</div>'
+        '<div class="s-title">Dukung Waskita Sastra</div>'
+        '<div class="s-sub">Aplikasi ini gratis. Jika bermanfaat bagi kajian atau karya Anda, '
+        "dukungan Anda membantu pengembangan fitur dan naskah baru.</div>"
+        '<div class="s-grid">' + "".join(buttons) + "</div>"
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -407,29 +410,66 @@ hr { border-color: var(--line); }
 /* ---------- DUKUNGAN ---------- */
 .support {
   text-align: center;
-  margin: 1.4rem 0 0.4rem;
-  padding: 1rem 1rem 1.1rem;
-  border: 1px dashed var(--line);
-  border-radius: 14px;
-  background: rgba(212,168,87,0.05);
+  margin: 2rem 0 0.6rem;
+  padding: 1.3rem 1.2rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(212,168,87,0.11), rgba(212,168,87,0.02) 60%, transparent);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.support p { color: var(--muted); font-size: 0.84rem; margin: 0 0 0.7rem; }
+.support .s-orn { color: var(--gold); letter-spacing: 0.6em; opacity: 0.7; font-size: 0.7rem; margin-bottom: 0.2rem; }
+.support .s-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--gold-soft);
+}
+.support .s-sub {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  max-width: 440px;
+  margin: 0.3rem auto 1rem;
+}
+.support .s-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.65rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
 .support a.support-btn {
-  display: inline-block;
-  margin: 0.2rem 0.25rem;
-  padding: 0.55rem 1.3rem;
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
   border: 1px solid var(--gold);
   color: var(--gold-soft) !important;
-  text-decoration: none;
+  text-decoration: none !important;
   font-weight: 600;
   font-size: 0.92rem;
+  white-space: nowrap;
   transition: all .18s ease;
 }
 .support a.support-btn:hover {
   background: rgba(212,168,87,0.14);
   color: var(--gold) !important;
   transform: translateY(-1px);
+}
+/* tombol pertama = aksi utama (terisi emas) */
+.support a.support-btn:first-child {
+  background: linear-gradient(135deg, #E8C98A 0%, #D4A857 45%, #B98A3A 100%);
+  color: #1A130A !important;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(212,168,87,0.28);
+}
+.support a.support-btn:first-child:hover { filter: brightness(1.08); color: #1A130A !important; }
+@media (max-width: 560px) {
+  .support { padding: 1.1rem 0.9rem; }
+  .support .s-grid { grid-template-columns: 1fr; }
 }
 </style>
 """
@@ -561,7 +601,8 @@ Jika ada kata atau bagian yang Anda tidak yakin, katakan terus terang.
             "Verifikasi dengan kamus (mis. Old Javanese-English Dictionary karya Zoetmulder) atau ahli filologi.</div>",
             unsafe_allow_html=True,
         )
-        support_block()
+
+    support_block()
 
 # ================= TAB 2: GUBAH =================
 with tab2:
@@ -717,7 +758,8 @@ Jangan mengutip bait secara harfiah kecuali Anda sangat yakin; jika tidak yakin,
             "sebelum dipublikasikan.</div>",
             unsafe_allow_html=True,
         )
-        support_block()
+
+    support_block()
 
 # ================= TAB 3: PUSTAKA =================
 with tab3:
@@ -734,6 +776,8 @@ with tab3:
             if st.button("Muat ke Telaah", key=f"load_{i}", on_click=set_state, args=("input_text", s["text"])):
                 st.toast("Teks dimuat. Buka tab Telaah untuk menganalisis.", icon="📜")
 
+    support_block()
+
 # ================= TAB 4: TENTANG =================
 with tab4:
     st.markdown('<div class="section-title">Tentang Waskita Sastra</div>', unsafe_allow_html=True)
@@ -742,6 +786,5 @@ with tab4:
         "Nusantara: menerjemahkan, membedah kosakata, menggali lapisan makna filosofisnya, dan menggubah "
         "kalimat modern menjadi sastra Jawa."
     )
-    st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
     support_block()
     st.caption("Dibangun dengan Python, Streamlit, & Gemini AI · Mobile Optimized")
