@@ -31,7 +31,7 @@ MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 # ------------------------------------------------------------------
 LINK_SAWERIA = "https://saweria.co/Localcoffe"
 LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"
-LINK_TELEGRAM = "t.me/FDEwithyours"
+LINK_TELEGRAM = ""
 
 SUPPORT_LINKS = [
     ("☕ Traktir via Saweria", LINK_SAWERIA),
