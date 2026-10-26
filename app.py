@@ -1,3 +1,5 @@
+import html
+
 import streamlit as st
 from google import genai
 
@@ -21,6 +23,31 @@ except Exception:
     client = None
 
 MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
+
+# ------------------------------------------------------------------
+# DUKUNGAN PENGEMBANG
+# Tempel link Saweria / Trakteer / Ko-fi / Buy Me a Coffee Anda di bawah ini.
+# Contoh: SUPPORT_URL = "https://saweria.co/namaanda"
+# Kosongkan ("") untuk menyembunyikan tombol dukungan.
+# ------------------------------------------------------------------
+SUPPORT_URL = ""
+SUPPORT_LABEL = "☕ Traktir kopi untuk pengembang"
+
+
+def support_block():
+    if not SUPPORT_URL:
+        return
+    url = html.escape(SUPPORT_URL, quote=True)
+    label = html.escape(SUPPORT_LABEL)
+    st.markdown(
+        f"""
+<div class="support">
+<p>Aplikasi ini gratis. Jika bermanfaat bagi kajian atau karya Anda, dukung pengembangannya.</p>
+<a class="support-btn" href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 
 def ask_gemini(prompt: str):
@@ -359,6 +386,33 @@ header[data-testid="stHeader"] { background: transparent; }
 .meta { color: var(--muted); font-size: 0.8rem; }
 .disclaimer { color: var(--muted); font-size: 0.76rem; text-align: center; margin-top: 1rem; }
 hr { border-color: var(--line); }
+
+/* ---------- DUKUNGAN ---------- */
+.support {
+  text-align: center;
+  margin: 1.4rem 0 0.4rem;
+  padding: 1rem 1rem 1.1rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: rgba(212,168,87,0.05);
+}
+.support p { color: var(--muted); font-size: 0.84rem; margin: 0 0 0.7rem; }
+.support a.support-btn {
+  display: inline-block;
+  padding: 0.55rem 1.3rem;
+  border-radius: 999px;
+  border: 1px solid var(--gold);
+  color: var(--gold-soft) !important;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: all .18s ease;
+}
+.support a.support-btn:hover {
+  background: rgba(212,168,87,0.14);
+  color: var(--gold) !important;
+  transform: translateY(-1px);
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -489,6 +543,7 @@ Jika ada kata atau bagian yang Anda tidak yakin, katakan terus terang.
             "Verifikasi dengan kamus (mis. Old Javanese-English Dictionary karya Zoetmulder) atau ahli filologi.</div>",
             unsafe_allow_html=True,
         )
+        support_block()
 
 # ================= TAB 2: GUBAH =================
 with tab2:
@@ -644,6 +699,7 @@ Jangan mengutip bait secara harfiah kecuali Anda sangat yakin; jika tidak yakin,
             "sebelum dipublikasikan.</div>",
             unsafe_allow_html=True,
         )
+        support_block()
 
 # ================= TAB 3: PUSTAKA =================
 with tab3:
@@ -669,4 +725,5 @@ with tab4:
         "kalimat modern menjadi sastra Jawa."
     )
     st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
+    support_block()
     st.caption("Dibangun dengan Python, Streamlit, & Gemini AI · Mobile Optimized")
