@@ -3,6 +3,12 @@ import html
 import streamlit as st
 from google import genai
 
+try:
+    import kartu  # pembuat kartu bagikan (kartu.py + folder fonts/)
+    KARTU_OK = True
+except Exception:
+    KARTU_OK = False
+
 # ------------------------------------------------------------------
 # KONFIGURASI HALAMAN
 # ------------------------------------------------------------------
@@ -31,13 +37,32 @@ MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
 # ------------------------------------------------------------------
 LINK_SAWERIA = "https://saweria.co/Localcoffe"
 LINK_SOCIABUZZ = "https://sociabuzz.com/localcoffegaming/tribe"
-LINK_TELEGRAM = ""
+LINK_TELEGRAM = "t.me/FDEwithyours"
 
 SUPPORT_LINKS = [
     ("☕ Traktir via Saweria", LINK_SAWERIA),
     ("🎁 Dukung via Sociabuzz", LINK_SOCIABUZZ),
     ("💬 Gabung Telegram", LINK_TELEGRAM),
 ]
+
+
+# ------------------------------------------------------------------
+# KARTU BAGIKAN
+# ------------------------------------------------------------------
+DEV_NAME = "Localcoffe"   # tampil di kaki kartu
+APP_URL = ""              # opsional: isi alamat aplikasi agar ikut tampil di kartu
+
+
+def _card_footer() -> str:
+    foot = f"dev · {DEV_NAME}"
+    if APP_URL:
+        foot += f"  ·  {APP_URL.replace('https://', '').replace('http://', '').rstrip('/')}"
+    return foot
+
+
+@st.cache_data(show_spinner=False, max_entries=32)
+def build_card(verse: str, translation: str, label: str, footer: str) -> bytes:
+    return kartu.make_card(verse, translation, label, footer)
 
 
 def _normalize_url(url: str) -> str:
@@ -737,6 +762,32 @@ Jangan mengutip bait secara harfiah kecuali Anda sangat yakin; jika tidak yakin,
         with st.container(border=True):
             st.markdown(resg["text"])
         st.caption(f"{resg['ragam']} · {resg['bentuk']} · {resg['nada']} · {resg['model']}")
+
+        # ---- Kartu bagikan (gambar PNG untuk WhatsApp / Instagram) ----
+        if KARTU_OK:
+            card_verse, card_trans = kartu.extract_card_parts(resg["text"])
+            if card_verse:
+                card_label = resg["bentuk"].replace(" (", " · ").replace(")", "")
+                try:
+                    card_png = build_card(card_verse, card_trans, card_label, _card_footer())
+                except Exception as e:
+                    card_png = None
+                    st.info(f"Kartu bagikan belum bisa dibuat: {e}")
+                if card_png:
+                    st.markdown('<div class="orn">✦ ✦ ✦</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-title">🖼 Kartu Bagikan</div>', unsafe_allow_html=True)
+                    _l, _m, _r = st.columns([1, 2, 1])
+                    with _m:
+                        st.image(card_png, width=360)
+                        st.download_button(
+                            "⬇ Unduh kartu (.png)",
+                            data=card_png,
+                            file_name="waskita-sastra-kartu.png",
+                            mime="image/png",
+                            key="dl_kartu",
+                        )
+                    if not kartu.FONTS_OK:
+                        st.caption("File font (CormorantGaramond*.ttf) belum diunggah, kartu memakai huruf cadangan.")
 
         export_g = (
             "# Waskita Sastra - Hasil Gubahan\n\n"
